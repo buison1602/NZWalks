@@ -1,9 +1,12 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using NZWalks.API.Data;
 using NZWalks.API.Models.Domain;
 using NZWalks.API.Models.DTO;
+using NZWalks.API.Repositories;
 
 namespace NZWalks.API.Controllers
 {
@@ -13,21 +16,30 @@ namespace NZWalks.API.Controllers
     public class RegionsController : ControllerBase
     {
         private readonly NZWalksDbContext _dbContext;
+        private readonly IRegionRepository _regionRepository;
+        private readonly IMapper _mapper;
 
-        public RegionsController(NZWalksDbContext dbContext)
+        public RegionsController(NZWalksDbContext dbContext, IRegionRepository regionRepository, 
+            IMapper mapper)
         {
-            this._dbContext = dbContext;    
+            this._dbContext = dbContext;
+            this._regionRepository = regionRepository;
+            this._mapper = mapper;
         }
+
 
         // GET ALL REGIONS
         // GET: https://localhost:portnumber/api/regions
         [HttpGet]
-        public IActionResult GetAll()
+        public async Task<IActionResult> GetAll()
         {
-            // GET Data From Database - DOmain models 
-            var regionsDomain = _dbContext.Regions.ToList();
+            // GET Data From Database - Domain models 
+            // Hàm ToList lấy tất cả các bản ghi từ CSDL. Trong trường hợp bị lỗi, không thể lấy thì thread sẽ bị block
+            // Lúc này thread chính sẽ không thể nhận thêm bất kì request nào nữa
+            // --> Sử dụng async/await để giải quyết vấn đề này
+            var regionsDomain = await _regionRepository.GetAllAsync();
 
-            // Map Domain Models to DTOs 
+            /* // Cách không dùng Mapper - Map Domain Models to DTOs 
             var regionsDto = new List<RegionDto>();
             foreach (var regionDomain in regionsDomain)
             {
@@ -38,11 +50,11 @@ namespace NZWalks.API.Controllers
                     Name = regionDomain.Name,
                     RegionImageUrl = regionDomain.RegionImageUrl
                 });
-            }
+            }*/
 
-            // REturn DTOs
-
-            return Ok(regionsDto);
+            // Map Domain Models to DTOs
+            // Return DTOs
+            return Ok(_mapper.Map<List<RegionDto>>(regionsDomain));
         }
 
 
@@ -50,57 +62,39 @@ namespace NZWalks.API.Controllers
         // GET: https://localhost:portnumber/api/regions/{id}
         [HttpGet]
         [Route("{id:Guid}")]
-        public IActionResult GetById([FromRoute] Guid id) 
+        public async Task<IActionResult> GetById([FromRoute] Guid id) 
         {
             //var region = _dbContext.Regions.Find(id); 
             // Get Region Domain Model From Database
-            var regionDomain = _dbContext.Regions.FirstOrDefault(u => u.Id == id);
+            var regionDomain = await _regionRepository.GetByIdAsync(id);
 
-            if(regionDomain == null)
+            if (regionDomain == null)
             {
                 return NotFound();
             }
 
             // Map/Convert REgion Domain Model to Region DTO
-            var regionDto = new RegionDto()
-            {
-                Id = regionDomain.Id,
-                Code = regionDomain.Code,
-                Name = regionDomain.Name,
-                RegionImageUrl = regionDomain.RegionImageUrl
-            };
-
             // Return DTO back to client 
-            return Ok(regionDto);
+            return Ok(_mapper.Map<RegionDto>(regionDomain));
         }
 
 
         // POST To Create New Region  
         // POST: https://localhost:portnumber/api/regions
         [HttpPost]
-        public IActionResult Create([FromBody] AddRegionRequestDto addRegionRequestDto)
+        public async Task<IActionResult> Create([FromBody] AddRegionRequestDto addRegionRequestDto)
         {
             // Map or Convert DTO to Domain Model 
-            var regionDomainModel = new Region
-            {
-                Code = addRegionRequestDto.Code,
-                Name = addRegionRequestDto.Name,
-                RegionImageUrl = addRegionRequestDto.RegionImageUrl
-            };
+            var regionDomainModel = _mapper.Map<Region>(addRegionRequestDto);
 
             // Use Domain Model to Add to Database
-            _dbContext.Regions.Add(regionDomainModel);
-            _dbContext.SaveChanges();
+            regionDomainModel = await _regionRepository.CreateAsync(regionDomainModel);
 
             // Map Domain model back to DTO 
-            var regionDto = new RegionDto()
-            {
-                Id = regionDomainModel.Id,
-                Code = regionDomainModel.Code,
-                Name = regionDomainModel.Name,
-                RegionImageUrl = regionDomainModel.RegionImageUrl
-            };
+            var regionDto = _mapper.Map<RegionDto>(regionDomainModel);
 
+            // CreatedAtAction dùng để trả về status code 201 Created và header Location chứa
+            // URL của resource vừa tạo
             return CreatedAtAction(nameof(GetById), new {id = regionDto.Id}, regionDto);
         }
 
@@ -109,34 +103,21 @@ namespace NZWalks.API.Controllers
         // PUT: https://localhost:portnumber/api/regions/{id}
         [HttpPut]
         [Route("{id:Guid}")]
-        public IActionResult Update([FromRoute] Guid id, [FromBody] UpdateRegionRequestDto updateRegionRequestDto)
+        public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] UpdateRegionRequestDto updateRegionRequestDto)
         {
+            // Map DTO to Domain model 
+            var regionDomainModel = _mapper.Map<Region>(updateRegionRequestDto);
+
             // Check if region exists
-            var regionDomainModel = _dbContext.Regions.FirstOrDefault(u => u.Id == id);
+            regionDomainModel = await _regionRepository.UpdateAsync(id, regionDomainModel);
 
             if (regionDomainModel == null) 
             {
                 return NotFound();
             }
 
-            // Map DTO to Domain model 
-            regionDomainModel.Code = updateRegionRequestDto.Code;
-            regionDomainModel.Name = updateRegionRequestDto.Name;
-            regionDomainModel.RegionImageUrl = updateRegionRequestDto.RegionImageUrl;
-
-            // Update Database
-            _dbContext.SaveChanges();
-
             // Convert Domain Model to DTO 
-            var regionDto = new RegionDto
-            {
-                Id = regionDomainModel.Id,
-                Code = regionDomainModel.Code,
-                Name = regionDomainModel.Name,
-                RegionImageUrl = regionDomainModel.RegionImageUrl,
-            };
-
-            return Ok(regionDto);
+            return Ok(_mapper.Map<RegionDto>(regionDomainModel));
         }
 
 
@@ -144,37 +125,19 @@ namespace NZWalks.API.Controllers
         // DELETE: https://localhost:portnumber/api/regions/{id}
         [HttpDelete]
         [Route("{id:Guid}")] 
-        public IActionResult Delete([FromRoute] Guid id)
+        public async Task<IActionResult> Delete([FromRoute] Guid id)
         {
-            var regionDomainModel = _dbContext.Regions.FirstOrDefault(u => u.Id == id);
-            
+            var regionDomainModel = await _regionRepository.DeleteAsync(id);
+
             if (regionDomainModel == null)
             {
                 return NotFound();
             }
 
-            // Delete region 
-            _dbContext.Regions.Remove(regionDomainModel);
-            _dbContext.SaveChanges();
-
             // return deleted Region back 
             // map Domain Model to DTO
-            var regionDto = new RegionDto
-            {
-                Id = regionDomainModel.Id,
-                Code = regionDomainModel.Code,
-                Name = regionDomainModel.Name,
-                RegionImageUrl = regionDomainModel.RegionImageUrl,
-            };
-
-            return Ok(regionDto);
-        
+            // Return DTO back to client 
+            return Ok(_mapper.Map<RegionDto>(regionDomainModel));
         }
-
-
-
-
-
-
     }
 }
