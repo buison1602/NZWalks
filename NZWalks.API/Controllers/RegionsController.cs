@@ -33,9 +33,16 @@ namespace NZWalks.API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
+
+
             // GET Data From Database - Domain models 
-            // Hàm ToList lấy tất cả các bản ghi từ CSDL. Trong trường hợp bị lỗi, không thể lấy thì thread sẽ bị block
-            // Lúc này thread chính sẽ không thể nhận thêm bất kì request nào nữa
+
+        // Cách cũ 
+            //var regionsDomain = _dbContext.Regions.ToList();
+            
+            
+            // Hàm ToList lấy tất cả các bản ghi từ CSDL. Trong trường hợp bị lỗi, không thể lấy thì 
+            // thread sẽ bị block. Lúc này thread chính sẽ không thể nhận thêm bất kì request nào nữa
             // --> Sử dụng async/await để giải quyết vấn đề này
             var regionsDomain = await _regionRepository.GetAllAsync();
 
@@ -84,18 +91,26 @@ namespace NZWalks.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] AddRegionRequestDto addRegionRequestDto)
         {
-            // Map or Convert DTO to Domain Model 
-            var regionDomainModel = _mapper.Map<Region>(addRegionRequestDto);
+            if (ModelState.IsValid)
+            {
+                // Map or Convert DTO to Domain Model 
+                var regionDomainModel = _mapper.Map<Region>(addRegionRequestDto);
 
-            // Use Domain Model to Add to Database
-            regionDomainModel = await _regionRepository.CreateAsync(regionDomainModel);
+                // Use Domain Model to Add to Database
+                regionDomainModel = await _regionRepository.CreateAsync(regionDomainModel);
 
-            // Map Domain model back to DTO 
-            var regionDto = _mapper.Map<RegionDto>(regionDomainModel);
+                // Map Domain model back to DTO 
+                var regionDto = _mapper.Map<RegionDto>(regionDomainModel);
 
-            // CreatedAtAction dùng để trả về status code 201 Created và header Location chứa
-            // URL của resource vừa tạo
-            return CreatedAtAction(nameof(GetById), new {id = regionDto.Id}, regionDto);
+                // CreatedAtAction dùng để trả về status code 201 Created và header Location chứa
+                // URL của resource vừa tạo
+                return CreatedAtAction(nameof(GetById), new { id = regionDto.Id }, regionDto);
+            }
+            else
+            {
+                return BadRequest(ModelState);
+            }
+            
         }
 
 
@@ -105,19 +120,27 @@ namespace NZWalks.API.Controllers
         [Route("{id:Guid}")]
         public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] UpdateRegionRequestDto updateRegionRequestDto)
         {
-            // Map DTO to Domain model 
-            var regionDomainModel = _mapper.Map<Region>(updateRegionRequestDto);
-
-            // Check if region exists
-            regionDomainModel = await _regionRepository.UpdateAsync(id, regionDomainModel);
-
-            if (regionDomainModel == null) 
+            if(ModelState.IsValid)
             {
-                return NotFound();
-            }
+                // Map DTO to Domain model 
+                var regionDomainModel = _mapper.Map<Region>(updateRegionRequestDto);
 
-            // Convert Domain Model to DTO 
-            return Ok(_mapper.Map<RegionDto>(regionDomainModel));
+                // Check if region exists
+                regionDomainModel = await _regionRepository.UpdateAsync(id, regionDomainModel);
+
+                if (regionDomainModel == null)
+                {
+                    return NotFound();
+                }
+
+                // Convert Domain Model to DTO 
+                return Ok(_mapper.Map<RegionDto>(regionDomainModel));
+            }
+            else
+            {
+                return BadRequest(ModelState);
+            }
+            
         }
 
 

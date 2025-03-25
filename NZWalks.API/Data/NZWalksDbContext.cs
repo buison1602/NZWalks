@@ -23,7 +23,6 @@ namespace NZWalks.API.Data
 
             // Seed data for Difficulties
             // Easy, Medium, Hard 
-
             var difficulties = new List<Difficulty>
             {
                 new Difficulty() 
