@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NZWalks.API.CustomActionFilters;
 using NZWalks.API.Data;
 using NZWalks.API.Models.Domain;
 using NZWalks.API.Models.DTO;
@@ -19,7 +20,7 @@ namespace NZWalks.API.Controllers
         private readonly IRegionRepository _regionRepository;
         private readonly IMapper _mapper;
 
-        public RegionsController(NZWalksDbContext dbContext, IRegionRepository regionRepository, 
+        public RegionsController(NZWalksDbContext dbContext, IRegionRepository regionRepository,
             IMapper mapper)
         {
             this._dbContext = dbContext;
@@ -37,10 +38,10 @@ namespace NZWalks.API.Controllers
 
             // GET Data From Database - Domain models 
 
-        // Cách cũ 
+            // Cách cũ 
             //var regionsDomain = _dbContext.Regions.ToList();
-            
-            
+
+
             // Hàm ToList lấy tất cả các bản ghi từ CSDL. Trong trường hợp bị lỗi, không thể lấy thì 
             // thread sẽ bị block. Lúc này thread chính sẽ không thể nhận thêm bất kì request nào nữa
             // --> Sử dụng async/await để giải quyết vấn đề này
@@ -69,7 +70,7 @@ namespace NZWalks.API.Controllers
         // GET: https://localhost:portnumber/api/regions/{id}
         [HttpGet]
         [Route("{id:Guid}")]
-        public async Task<IActionResult> GetById([FromRoute] Guid id) 
+        public async Task<IActionResult> GetById([FromRoute] Guid id)
         {
             //var region = _dbContext.Regions.Find(id); 
             // Get Region Domain Model From Database
@@ -89,28 +90,21 @@ namespace NZWalks.API.Controllers
         // POST To Create New Region  
         // POST: https://localhost:portnumber/api/regions
         [HttpPost]
+        [ValidateModel]
         public async Task<IActionResult> Create([FromBody] AddRegionRequestDto addRegionRequestDto)
         {
-            if (ModelState.IsValid)
-            {
-                // Map or Convert DTO to Domain Model 
-                var regionDomainModel = _mapper.Map<Region>(addRegionRequestDto);
+            // Map or Convert DTO to Domain Model 
+            var regionDomainModel = _mapper.Map<Region>(addRegionRequestDto);
 
-                // Use Domain Model to Add to Database
-                regionDomainModel = await _regionRepository.CreateAsync(regionDomainModel);
+            // Use Domain Model to Add to Database
+            regionDomainModel = await _regionRepository.CreateAsync(regionDomainModel);
 
-                // Map Domain model back to DTO 
-                var regionDto = _mapper.Map<RegionDto>(regionDomainModel);
+            // Map Domain model back to DTO 
+            var regionDto = _mapper.Map<RegionDto>(regionDomainModel);
 
-                // CreatedAtAction dùng để trả về status code 201 Created và header Location chứa
-                // URL của resource vừa tạo
-                return CreatedAtAction(nameof(GetById), new { id = regionDto.Id }, regionDto);
-            }
-            else
-            {
-                return BadRequest(ModelState);
-            }
-            
+            // CreatedAtAction dùng để trả về status code 201 Created và header Location chứa
+            // URL của resource vừa tạo
+            return CreatedAtAction(nameof(GetById), new { id = regionDto.Id }, regionDto);
         }
 
 
@@ -118,36 +112,29 @@ namespace NZWalks.API.Controllers
         // PUT: https://localhost:portnumber/api/regions/{id}
         [HttpPut]
         [Route("{id:Guid}")]
+        [ValidateModel]
         public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] UpdateRegionRequestDto updateRegionRequestDto)
         {
-            if(ModelState.IsValid)
+            // Map DTO to Domain model 
+            var regionDomainModel = _mapper.Map<Region>(updateRegionRequestDto);
+
+            // Check if region exists
+            regionDomainModel = await _regionRepository.UpdateAsync(id, regionDomainModel);
+
+            if (regionDomainModel == null)
             {
-                // Map DTO to Domain model 
-                var regionDomainModel = _mapper.Map<Region>(updateRegionRequestDto);
-
-                // Check if region exists
-                regionDomainModel = await _regionRepository.UpdateAsync(id, regionDomainModel);
-
-                if (regionDomainModel == null)
-                {
-                    return NotFound();
-                }
-
-                // Convert Domain Model to DTO 
-                return Ok(_mapper.Map<RegionDto>(regionDomainModel));
+                return NotFound();
             }
-            else
-            {
-                return BadRequest(ModelState);
-            }
-            
+
+            // Convert Domain Model to DTO 
+            return Ok(_mapper.Map<RegionDto>(regionDomainModel));
         }
 
 
         // Delete Region 
         // DELETE: https://localhost:portnumber/api/regions/{id}
         [HttpDelete]
-        [Route("{id:Guid}")] 
+        [Route("{id:Guid}")]
         public async Task<IActionResult> Delete([FromRoute] Guid id)
         {
             var regionDomainModel = await _regionRepository.DeleteAsync(id);
