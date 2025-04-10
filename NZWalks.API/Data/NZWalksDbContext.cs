@@ -6,9 +6,9 @@ namespace NZWalks.API.Data
     // DbContext có vai trò thao tác với CSDL 
     public class NZWalksDbContext : DbContext
     {
-        public NZWalksDbContext(DbContextOptions dbContextOptions) : base(dbContextOptions)
+        public NZWalksDbContext(DbContextOptions<NZWalksDbContext> dbContextOptions) : base(dbContextOptions)
         {
-
+    
         }
 
         // DbSet là một tập hợp các đối tượng được lưu trong CSDL

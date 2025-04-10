@@ -28,6 +28,53 @@
 			--> Lấy ra 10 user đầu tiên của trang 1
 
 
+3. Authentication Flow (JWT)
+	- Cấu hình appsettings.json:
+		+ Key: gen ra từ Guid.NewGuid() 
+		+ Issuer: 
+			. Vào properties của dự án. 
+			. Vào Debug/General/Open debug launch profiles UI
+			. Tại mục https -> kéo xuống dưới tìm app url 
+	
+	- Thêm và cấu hình dịch vụ AddAuthentication trong program.cs 
+
+	- Seed Role 
+		PM> Add-Migration "Creating Auth Database"
+		Build started...
+		Build succeeded.
+		More than one DbContext was found. Specify which one to use. Use the '-Context' parameter for PowerShell commands and the '--context' parameter for dotnet commands.
+		PM> Add-Migration "Creating Auth Database" -Context "NZWalksAuthDbContext"
+
+		+ Khi chạy Add-Migration "Creating Auth Database" do có nhiều DbContext được tạo nên ta phải chỉ định sử dụng DbContext nào 
+		+ Sau đó update database ta cũng cần chỉ định rõ update DbContext nào 
+			PM> Update-Database -Context "NZWalksAuthDbContext"
+
+	- Setting Up Identity: Thiết lập danh tính 
+	- Cấu hình cho IdentityOptions
+
+
+	- Tạo Interface ITokenRepository và Class TokenRepository
+		+ Có method CreateJWTToken
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
