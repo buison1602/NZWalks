@@ -12,6 +12,7 @@ using Azure.Core;
 using static System.Net.WebRequestMethods;
 using System.Reflection.PortableExecutable;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.Extensions.FileProviders;
 
 // Mục đích của builder.Services:
 //  - Khai báo các dịch vụ mà ứng dụng cần.
@@ -22,6 +23,10 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
+
+// Để sử dụng IHttpContextAccessor trong các lớp khác như repository, service, ...
+builder.Services.AddHttpContextAccessor(); 
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -32,6 +37,7 @@ builder.Services.AddSwaggerGen(options =>
     //      Tên, version, ...
     // Tạo "version" cho tài liệu API trong Swagger. (v1, v2, ...)
     options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "NZ Walks API", Version = "v1" });
+
 
     // Khai báo rằng API dùng token kiểu Bearer trong header.
     // Bạn nói với Swagger rằng:
@@ -55,6 +61,7 @@ builder.Services.AddSwaggerGen(options =>
     // Swagger sẽ tự động thêm token bạn nhập vào header mỗi lần gọi API
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
+        // cú pháp khởi tạo dictionary theo kiểu "inline initializer" 
         {
             // định nghĩa cách gửi token
             new OpenApiSecurityScheme
@@ -86,6 +93,8 @@ builder.Services.AddDbContext<NZWalksAuthDbContext>(options =>
 builder.Services.AddScoped<IRegionRepository, SQLRegionRepository>();
 builder.Services.AddScoped<IWalkRepository, SQLWalkRepository>();
 builder.Services.AddScoped<ITokenRepository, TokenRepository>();
+builder.Services.AddScoped<IImageRepository, LocalImageRepositopy>();
+
 
 builder.Services.AddAutoMapper(typeof(AutoMapperProfiles));
 
@@ -175,6 +184,17 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+
+// Dòng code này nhằm cấu hình ASP.NET Core để phục vụ (serve) các file tĩnh từ thư mục Images, nằm trong gốc của dự án.
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "Images")),
+    RequestPath = "/Images"
+    // https://Localhost:1234/Images
+
+});
+
 
 app.MapControllers();
 

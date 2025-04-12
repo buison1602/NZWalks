@@ -57,6 +57,11 @@
 		+ Có method CreateJWTToken
 
 
+4. Image Upload 
+	- Tạo domain model Image 
+	
+	- Mặc định, ASP.NET Core không thể phục vụ(serve) các static files như là image, html, css, ... 
+		+ Thêm app.UseStaticFiles() vào program.cs
 
 
 
