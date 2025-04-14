@@ -2,10 +2,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using NZWalks.API.CustomActionFilters;
 using NZWalks.API.Models.Domain;
 using NZWalks.API.Models.DTO;
 using NZWalks.API.Repositories;
+using System.Net;
 
 namespace NZWalks.API.Controllers
 {
@@ -47,8 +49,12 @@ namespace NZWalks.API.Controllers
             [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 1000)
         // isAscending: true(sắp xếp từ nhỏ tới lớn), false(ngược lại :>>>>>>)
         {
-            var walksDomainModel = await _walkRepository.GetAllAsync(filterOn, filterQuery, sortBy, 
-                isAscending ?? true, pageNumber, pageSize);
+            
+            // test logging exception
+            //throw new Exception("This is a new error");
+
+            var walksDomainModel = await _walkRepository.GetAllAsync(filterOn, filterQuery, sortBy,
+            isAscending ?? true, pageNumber, pageSize);
 
             // Map Domain Model to DTO
             return Ok(_mapper.Map<List<WalkDto>>(walksDomainModel));

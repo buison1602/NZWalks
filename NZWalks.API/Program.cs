@@ -13,6 +13,8 @@ using static System.Net.WebRequestMethods;
 using System.Reflection.PortableExecutable;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.FileProviders;
+using Serilog;
+using NZWalks.API.Middlewares;
 
 // Mục đích của builder.Services:
 //  - Khai báo các dịch vụ mà ứng dụng cần.
@@ -21,6 +23,17 @@ using Microsoft.Extensions.FileProviders;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+
+// Sử dụng logging Serilog để ghi lại thông tin log cho ứng dụng.
+var logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.File("Logs/NzWalks_Log.txt", rollingInterval: RollingInterval.Minute)
+    .MinimumLevel.Warning()
+    .CreateLogger();
+
+builder.Logging.ClearProviders();
+builder.Logging.AddSerilog(logger);
+
 
 builder.Services.AddControllers();
 
@@ -178,12 +191,20 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// * Middleware nào được viết trước thì sẽ được gọi trước. *
+
+// Thêm middleware xử lý lỗi toàn cục cho ứng dụng. 
+app.UseMiddleware<ExceptionHandlerMiddleware>();
+
+
 app.UseHttpsRedirection();
 
 // Kích hoạt Middleware Authentication sau khi đăng ký Authentication
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+
 
 
 // Dòng code này nhằm cấu hình ASP.NET Core để phục vụ (serve) các file tĩnh từ thư mục Images, nằm trong gốc của dự án.

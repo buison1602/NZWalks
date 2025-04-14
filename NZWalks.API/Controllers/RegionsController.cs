@@ -9,6 +9,7 @@ using NZWalks.API.Data;
 using NZWalks.API.Models.Domain;
 using NZWalks.API.Models.DTO;
 using NZWalks.API.Repositories;
+using System.Text.Json;
 
 namespace NZWalks.API.Controllers
 {
@@ -21,13 +22,16 @@ namespace NZWalks.API.Controllers
         private readonly NZWalksDbContext _dbContext;
         private readonly IRegionRepository _regionRepository;
         private readonly IMapper _mapper;
+        private readonly ILogger<RegionsController> _logger;
 
         public RegionsController(NZWalksDbContext dbContext, IRegionRepository regionRepository,
-            IMapper mapper)
+            IMapper mapper,
+            ILogger<RegionsController> logger)
         {
             this._dbContext = dbContext;
             this._regionRepository = regionRepository;
             this._mapper = mapper;
+            this._logger = logger;
         }
 
 
@@ -37,7 +41,8 @@ namespace NZWalks.API.Controllers
         [Authorize(Roles = "Reader")]
         public async Task<IActionResult> GetAll()
         {
-
+            // test logging
+            //throw new Exception("This is an custom exception log");
 
             // GET Data From Database - Domain models 
 
@@ -51,20 +56,23 @@ namespace NZWalks.API.Controllers
             var regionsDomain = await _regionRepository.GetAllAsync();
 
             /* // Cách không dùng Mapper - Map Domain Models to DTOs 
-            var regionsDto = new List<RegionDto>();
-            foreach (var regionDomain in regionsDomain)
-            {
-                regionsDto.Add(new RegionDto()
+                var regionsDto = new List<RegionDto>();
+                foreach (var regionDomain in regionsDomain)
                 {
-                    Id = regionDomain.Id,
-                    Code = regionDomain.Code,
-                    Name = regionDomain.Name,
-                    RegionImageUrl = regionDomain.RegionImageUrl
-                });
-            }*/
+                    regionsDto.Add(new RegionDto()
+                    {
+                        Id = regionDomain.Id,
+                        Code = regionDomain.Code,
+                        Name = regionDomain.Name,
+                        RegionImageUrl = regionDomain.RegionImageUrl
+                    });
+                }*/
 
             // Map Domain Models to DTOs
             // Return DTOs
+
+            _logger.LogInformation($"Finished GetAllRegions request with data: {JsonSerializer.Serialize(regionsDomain)}");
+
             return Ok(_mapper.Map<List<RegionDto>>(regionsDomain));
         }
 

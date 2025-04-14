@@ -64,9 +64,18 @@
 		+ Thêm app.UseStaticFiles() vào program.cs
 
 
+5. Add Logging to Console in ASP.NET 
+	- Cài các Nuget Serilog, Serilog.AspNetCore, Serilog.Sinks.Console, Serilog.Sinks.File
+	- Cấu hình cho Serilog trong program.cs
 
+	- Thêm logging vào text file trong ASP.NET CORE
 
-
+	- Viết middleware trong ExceptionMiddleware.cs
+		+ Tạo folder Middleware
+		+ Tạo class ExceptionMiddleware.cs
+		+ Thêm vào middleware pipeline ở trong program.cs 
+			--> app.UseMiddleware<ExceptionHandlerMiddleware>();
+		
 
 
 
