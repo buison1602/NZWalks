@@ -77,17 +77,90 @@
 			--> app.UseMiddleware<ExceptionHandlerMiddleware>();
 		
 
+6. Versioning in ASP.NET CORE WEB API
+	- Khi ứng dụng của bạn phát triển, bạn có thể:
+		+ Thêm/bớt field trong response.
+		+ Đổi logic xử lý.
+		+ Thay đổi input/output format.
+
+	➡ Nếu không versioning, client cũ có thể lỗi vì không tương thích.
+
+	- Ví dụ:
+		+ Client A dùng v1: GET /api/products → trả tên sản phẩm
+		+ Client B dùng v2: GET /api/products → trả tên + giá + trạng thái
+
+	- Các cách định nghĩa version trong Web API
+		+ URL-based (phổ biến)		/api/v1/products
+		+ Query string				/api/products?api-version=1.0
+		+ Header-based				Gửi header: api-version: 1.0
+		+ Media-type				Gửi header: Accept: application/json;v=1.0
+
+
+	- Sửa đổi lại DTO, gồm V1(version 1) và V2
+	- Cài đặt Nuget Microsoft.AspNetCore.Mvc.Versioning
+	- Tại program.cs thêm 
+		builder.Services.AddApiVersioning(options => 
+		{
+			options.AssumeDefaultVersionWhenUnspecified = true;
+		})  
+
+	- Sửa đổi lại các controller để sử dụng versioning
+		+ Tại Controller
+			* Thêm [ApiVersion("1.0")] --> Phiên bản chính
+			* Thêm [ApiVersion("2.0")] --> Phiên bản mới 
+		+ Tạo action V2
+		+ Thêm [MapToApiVersion("1.0")] vào action
+
+	- Lúc này đã có thể thực hiện request như sau: ( - VÍ DỤ - )
+		+ https://localhost:7027/api/Walks?api-version=1.0
+		+ https://localhost:7027/api/Walks?api-version=2.0
+
+	- Nếu sửa lại Route ở trong controller thành [Route("api/v{version:apiVersion}/[controller]")] thì có thể request như sau:
+		+ https://localhost:7027/api/v1/Walks
+		+ https://localhost:7027/api/v2/Walks
 
 
 
+	- Cài đặt Microsoft.AspNetCore.Mvc.Versioning.ApiExplorer
+	- Tự động đổi thành 
+		builder.Services.AddApiVersioning(options => 
+		{
+			options.AssumeDefaultVersionWhenUnspecified = true;
+			options.DefaultApiVersion = new ApiVersion(1, 0);
+			options.ApiVersion = true;
+		})  
 
+	- Thêm vào program.cs
+		builder.Services.AddVersionedApiExplorer(options => 
+		{
+			options.GroupNameFormat = "'v'VVV";
+			options.SubstituteApiVersionInUrl = true;
+		}) 
 
+		var versionDescriptionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
 
+	- Sửa
+		if (app.Environment.IsDevelopment())
+		{
+			app.UseSwagger();
+			app.UseSwaggerUI(options => 
+			{
+				foreach (var description in versionDescriptionProvider.ApiVersionDescriptions)
+				{
+					options.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", 
+						description.GroupName.ToUpperInvariant());
+				}
+			});
+		}
 
+	- Lúc này swagger đã hiện action V1 nhưng chưa hiện action V2. Tạo class ConfigurationSwaggerOption.cs
+		+ Class đã được tạo ở bên Solution Explorer	:>>>>>>>>
 
-
-
-
+	- Thêm builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
+		
+	--> Bây giờ chạy lại thì thấy có Select a definition ở trên swagger UI
+		+ Chọn V2 thì sẽ hiện ra các action của V2
+		+ Chọn V1 thì sẽ hiện ra các action của V1
 
 
 
